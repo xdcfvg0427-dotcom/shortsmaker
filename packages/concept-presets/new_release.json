@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "new_release",
+  "name": "신제품 출시",
+  "description": "신제품 출시에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "awareness",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#356CB2", "#E2EDFA", "#FFFFFF"],
+  "fontStyle": "bold",
+  "captionStyle": "editorial",
+  "pace": "normal",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["grain"],
+  "musicMood": "bright_cute",
+  "copyTone": "announcement",
+  "hookPatterns": [
+    "오늘 처음 소개하는 문구",
+    "신제품 출시, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

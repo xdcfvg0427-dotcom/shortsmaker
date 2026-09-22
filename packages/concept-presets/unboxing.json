@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "unboxing",
+  "name": "언박싱 스타일",
+  "description": "언박싱 스타일에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "information",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#A57042", "#F8E9D3", "#FFFFFF"],
+  "fontStyle": "rounded",
+  "captionStyle": "editorial",
+  "pace": "normal",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["grain"],
+  "musicMood": "bright_cute",
+  "copyTone": "curious",
+  "hookPatterns": [
+    "어떤 모습일지 같이 볼까요?",
+    "언박싱 스타일, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

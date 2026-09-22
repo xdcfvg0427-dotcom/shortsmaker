@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "character",
+  "name": "캐릭터 중심",
+  "description": "캐릭터 중심에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "engagement",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#985E90", "#F5DFEF", "#FFFFFF"],
+  "fontStyle": "rounded",
+  "captionStyle": "editorial",
+  "pace": "normal",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["grain"],
+  "musicMood": "bright_cute",
+  "copyTone": "affectionate",
+  "hookPatterns": [
+    "자꾸만 눈이 가는 이 모습",
+    "캐릭터 중심, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

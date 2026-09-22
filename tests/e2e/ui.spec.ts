@@ -1,0 +1,27 @@
+import {test,expect} from '@playwright/test';
+test('프리셋 폼 생성·수정·삭제와 태블릿 화면',async({page})=>{
+  test.setTimeout(90000);
+  page.setDefaultTimeout(15000);
+  const errors:string[]=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/#presets');
+  await page.getByRole('button',{name:'새 프리셋',exact:true}).click();
+  await page.getByLabel('컨셉 이름',{exact:true}).fill('브라우저 검증 컨셉');
+  await page.getByRole('textbox',{name:'컨셉 설명',exact:true}).fill('폼으로 만든 사용자 프리셋');
+  await page.getByRole('button',{name:'프리셋 저장',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'브라우저 검증 컨셉',exact:true})).toBeVisible();
+  await page.getByLabel('컨셉 이름',{exact:true}).fill('수정한 검증 컨셉');
+  await page.getByRole('button',{name:'프리셋 저장',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'수정한 검증 컨셉',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'삭제',exact:true}).click();
+  await page.getByRole('button',{name:'확인하고 진행'}).click();
+  await expect(page.getByRole('button',{name:/수정한 검증 컨셉/})).toHaveCount(0);
+  await page.goto('/#settings');
+  await expect(page.getByRole('heading',{name:'기본 브랜드 로고'})).toBeVisible();
+  await page.setViewportSize({width:820,height:1180});
+  await page.goto('/#home');
+  await expect(page.getByRole('button',{name:'새 쇼츠 만들기',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'test-results/tablet.png',fullPage:true});
+  expect(errors).toEqual([]);
+});

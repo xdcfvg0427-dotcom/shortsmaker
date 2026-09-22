@@ -1,0 +1,6 @@
+{
+  "name": "@paper/schema",
+  "private": true,
+  "type": "module",
+  "exports": "./index.ts"
+}

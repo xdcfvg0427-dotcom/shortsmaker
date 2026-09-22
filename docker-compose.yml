@@ -1,0 +1,67 @@
+x-runtime: &runtime
+  build:
+    context: .
+    target: runtime
+  volumes:
+    - studio-data:/app/storage
+  environment: &environment
+    DATABASE_URL: ${DOCKER_DATABASE_URL:-sqlite:////app/storage/studio.db}
+    STORAGE_DIR: /app/storage
+    CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+    AI_PROVIDER: ${AI_PROVIDER:-demo}
+    AI_API_KEY: ${AI_API_KEY:-}
+    AI_MODEL: ${AI_MODEL:-claude-sonnet-4-20250514}
+    AI_BASE_URL: ${AI_BASE_URL:-https://api.anthropic.com}
+    AI_TIMEOUT: ${AI_TIMEOUT:-90}
+    TTS_API_KEY: ${TTS_API_KEY:-}
+    TTS_VOICE_ID: ${TTS_VOICE_ID:-}
+    TTS_MODEL: ${TTS_MODEL:-eleven_multilingual_v2}
+    RUNWAY_API_KEY: ${RUNWAY_API_KEY:-}
+    VIDEO_TIMEOUT: ${VIDEO_TIMEOUT:-900}
+    STORAGE_LIMIT_MB: ${STORAGE_LIMIT_MB:-10240}
+    MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
+    MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-40000000}
+    RENDER_TIMEOUT: ${RENDER_TIMEOUT:-1800}
+    RENDER_CONCURRENCY: ${RENDER_CONCURRENCY:-2}
+services:
+  migrate:
+    <<: *runtime
+    command: ["alembic", "upgrade", "head"]
+  api:
+    <<: *runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  renderer:
+    <<: *runtime
+    command: ["python", "-m", "apps.api.worker"]
+    shm_size: 1gb
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 30s
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  studio-data:

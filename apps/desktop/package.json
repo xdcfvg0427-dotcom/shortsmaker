@@ -1,0 +1,8 @@
+{
+  "name": "paper-studio-desktop",
+  "version": "1.0.0",
+  "description": "종이상점 AI 쇼츠 스튜디오",
+  "author": "Paper Studio",
+  "private": true,
+  "main": "main.cjs"
+}

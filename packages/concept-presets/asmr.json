@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "asmr",
+  "name": "ASMR 분위기",
+  "description": "ASMR 분위기에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "emotion",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#6B7161", "#EEEDE2", "#FFFFFF"],
+  "fontStyle": "clean",
+  "captionStyle": "bubble",
+  "pace": "slow",
+  "transitionSet": ["fade", "soft_zoom"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["sparkle", "sticker"],
+  "musicMood": "lofi",
+  "copyTone": "quiet",
+  "hookPatterns": [
+    "잠깐의 여유, 문구 한 장면",
+    "ASMR 분위기, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

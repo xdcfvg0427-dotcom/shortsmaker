@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "retro",
+  "name": "레트로 문구점",
+  "description": "레트로 문구점에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "emotion",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#9B4F36", "#E6D29D", "#FFFFFF"],
+  "fontStyle": "magazine",
+  "captionStyle": "banner",
+  "pace": "normal",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["grid"],
+  "musicMood": "bright_cute",
+  "copyTone": "nostalgic",
+  "hookPatterns": [
+    "그 시절 문구점이 생각나는 순간",
+    "레트로 문구점, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

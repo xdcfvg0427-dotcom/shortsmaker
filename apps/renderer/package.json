@@ -1,0 +1,5 @@
+{
+  "name": "@paper/renderer",
+  "private": true,
+  "type": "module"
+}

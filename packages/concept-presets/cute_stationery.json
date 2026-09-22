@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "cute_stationery",
+  "name": "귀여운 문구점",
+  "description": "귀여운 문구점에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "engagement",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#D87182", "#FBE8D8", "#FFFFFF"],
+  "fontStyle": "rounded",
+  "captionStyle": "bubble",
+  "pace": "fast",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["sparkle", "sticker"],
+  "musicMood": "bright_cute",
+  "copyTone": "friendly_playful",
+  "hookPatterns": [
+    "책상 위에 작은 설렘",
+    "귀여운 문구점, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

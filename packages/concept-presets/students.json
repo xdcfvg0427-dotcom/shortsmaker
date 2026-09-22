@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "students",
+  "name": "학생 추천템",
+  "description": "학생 추천템에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "sales",
+  "targetAudience": ["stationery_fans", "students"],
+  "palette": ["#3B7C99", "#E6F3DA", "#FFFFFF"],
+  "fontStyle": "rounded",
+  "captionStyle": "minimal",
+  "pace": "fast",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["highlight"],
+  "musicMood": "bright_cute",
+  "copyTone": "friendly",
+  "hookPatterns": [
+    "새 학기 책상에 놓고 싶은 문구",
+    "학생 추천템, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": ["신학기"]
+}

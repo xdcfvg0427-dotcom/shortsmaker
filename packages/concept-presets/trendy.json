@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "trendy",
+  "name": "트렌디 SNS",
+  "description": "트렌디 SNS에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "awareness",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#7453C4", "#DFE6FF", "#FFFFFF"],
+  "fontStyle": "bold",
+  "captionStyle": "bubble",
+  "pace": "fast",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["sparkle", "sticker"],
+  "musicMood": "bright_cute",
+  "copyTone": "energetic",
+  "hookPatterns": [
+    "잠깐, 이 문구 보고 가세요",
+    "트렌디 SNS, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}

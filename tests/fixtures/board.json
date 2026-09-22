@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "durationSec": 15,
+  "fps": 30,
+  "conceptId": "cute_stationery",
+  "hook": "오늘의 문구",
+  "hookCandidates": ["오늘의 문구", "기록의 시작", "나만의 책상"],
+  "scenes": [
+    {
+      "id": "scene-1",
+      "assetId": "fixture",
+      "videoAssetId": null,
+      "videoPrompt": "",
+      "startFrame": 0,
+      "durationFrames": 60,
+      "layout": "blur_contain",
+      "fit": "contain",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "motion": {
+        "type": "zoom_in",
+        "strength": 0.04
+      },
+      "transitionIn": "fade",
+      "transitionOut": "fade",
+      "caption": "오늘의 문구",
+      "captionEmphasis": [],
+      "voiceover": ""
+    },
+    {
+      "id": "scene-2",
+      "assetId": "fixture",
+      "videoAssetId": null,
+      "videoPrompt": "",
+      "startFrame": 60,
+      "durationFrames": 390,
+      "layout": "endcard",
+      "fit": "contain",
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "motion": {
+        "type": "zoom_in",
+        "strength": 0.04
+      },
+      "transitionIn": "fade",
+      "transitionOut": "fade",
+      "caption": "만나보세요",
+      "captionEmphasis": [],
+      "voiceover": ""
+    }
+  ],
+  "outro": {
+    "productName": "노트",
+    "priceText": "3,500원",
+    "cta": "만나보세요"
+  },
+  "style": {
+    "pace": "normal",
+    "captionStyle": "rounded",
+    "musicMood": "none",
+    "narration": "script",
+    "narrationSource": "script",
+    "priceDisplay": "last",
+    "brandColor": "#496D59",
+    "volume": 0.25,
+    "fadeSec": 1,
+    "ducking": true,
+    "variants": 1
+  }
+}

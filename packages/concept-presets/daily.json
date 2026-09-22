@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "daily",
+  "name": "오늘의 문구 추천",
+  "description": "오늘의 문구 추천에 어울리는 색상, 자막과 리듬으로 상품을 소개합니다.",
+  "marketingGoal": "engagement",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#527357", "#F0EBD9", "#FFFFFF"],
+  "fontStyle": "rounded",
+  "captionStyle": "banner",
+  "pace": "normal",
+  "transitionSet": ["pop", "slide", "fade"],
+  "motionSet": ["zoom_in", "pan_left", "zoom_out", "pan_right"],
+  "overlaySet": ["grid"],
+  "musicMood": "bright_cute",
+  "copyTone": "friendly",
+  "hookPatterns": [
+    "오늘의 문구 취향을 골라보세요",
+    "오늘의 문구 추천, 나만의 취향을 찾아요",
+    "오늘은 어떤 문구를 고를까요?"
+  ],
+  "outroPattern": "마음에 드는 문구를 만나보세요",
+  "seasonTags": []
+}
