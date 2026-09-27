@@ -50,6 +50,7 @@ import { ShortsVideo, type VideoProps } from "../../renderer/src/Video";
 import { api, send } from "./api";
 import { PresetFields } from "./PresetFields";
 import { DesktopSettings } from "./DesktopSettings";
+import { AutoVideoPanel } from "./AutoVideoPanel";
 
 type Project = {
   id: string;
@@ -1068,9 +1069,12 @@ function NewProject({
     audience: "",
     cta: defaults.data?.defaults.cta || "오늘의 문구를 만나보세요",
     duration: 15,
-    conceptId: "cute_stationery",
+    conceptId: "review",
     style: {
       ...defaultStyle,
+      pace: "fast",
+      captionStyle: "bold",
+      musicMood: "trendy",
       brandColor: defaults.data?.defaults.brandColor || defaultStyle.brandColor,
     },
   };
@@ -1422,13 +1426,23 @@ function Studio({
     refetchInterval: 1500,
   });
   const p = project.data;
+  const lastAutoJob = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const job = p?.jobs[0];
+    if (job?.kind === "auto_video" && !terminal.includes(job.status)) {
+      lastAutoJob.current = job.id;
+    } else if (job?.kind === "auto_video" && job.status === "completed" && lastAutoJob.current === job.id) {
+      setTab("results");
+      lastAutoJob.current = undefined;
+    }
+  }, [p?.jobs]);
   const previous = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (p?.board && !previous.current) {
-      setTab("edit");
+      setTab(p.jobs[0]?.kind === "auto_video" ? "results" : "edit");
       previous.current = "loaded";
     }
-  }, [p?.board]);
+  }, [p?.board, p?.jobs]);
   if (project.isPending)
     return (
       <div className="empty">
@@ -1495,6 +1509,7 @@ function Studio({
           <b>{statusNames[p.jobs[0].kind] || "작업"} 실패</b>
           <span>
             {p.jobs[0].error}
+            {p.jobs[0].photos && <small>전체 {p.jobs[0].photos.length}장 중 {p.jobs[0].photos.filter(photo => photo.status === "completed").length}장 완료 · 완료된 영상은 저장되어 있습니다.</small>}
             <small>실패 단계: {p.jobs[0].error_code}</small>
           </span>
           <button
@@ -1536,6 +1551,7 @@ function Studio({
           >
             <AssetManager project={p} run={run} ask={ask} disabled={locked} />
           </ProductForm>
+          <AutoVideoPanel project={p} disabled={locked} run={run} onStart={() => setTab("results")} />
           <section className="panel">
             <div className="panel-title">
               <Sparkles />
@@ -1728,13 +1744,13 @@ export function JobStatus({
         <LoaderCircle className="spin" />
         <div>
           <b>
-            {job.kind === "video" ? "AI 영상 생성 · " : ""}
-            {job.kind === "video" && job.status === "images"
+            {job.kind === "auto_video" ? "전체 사진 자동 제작 · " : job.kind === "video" ? "AI 영상 생성 · " : ""}
+            {(job.kind === "video" || job.kind === "auto_video") && job.status === "images" && job.phase !== "render"
               ? "움직임 생성 중"
               : statusNames[job.status] || job.status}
           </b>
           <p>
-            이 화면을 벗어나도 작업은 계속됩니다. · {Math.floor(job.progress)}%
+            다른 탭을 볼 수 있어요. 완료될 때까지 프로그램은 켜 두세요. · {Math.floor(job.progress)}%
           </p>
         </div>
         <button disabled={disabled} onClick={onCancel}>
@@ -1742,8 +1758,14 @@ export function JobStatus({
         </button>
       </div>
       <progress aria-label="작업 진행률" value={job.progress} max="100" />
+      {job.photos && <div className="auto-job-photos">
+        <p>영상 준비 {job.photos.filter(p => p.status === "completed").length} / {job.photos.length}장 · {job.phase === "render" ? "자막·음악을 합쳐 완성하는 중" : "완료된 영상은 자동으로 저장됩니다"}</p>
+        <ul>{job.photos.map((photo, index) => <li key={photo.assetId}><span>사진 {index + 1} · {photo.filename}</span><b>{({ completed: "완료", processing: "생성 중", checking: "접수 확인", pending: "대기", failed: "생성 실패" } as Record<string, string>)[photo.status]}</b></li>)}</ul>
+      </div>}
       <div className="job-steps">
-        {(job.kind === "video"
+        {(job.kind === "auto_video"
+          ? ["storyboarding", "images", "audio", "rendering", "completed"]
+          : job.kind === "video"
           ? ["queued", "images", "verifying", "completed"]
           : [
               "queued",
@@ -1756,7 +1778,7 @@ export function JobStatus({
             ]
         ).map((s) => (
           <span key={s} className={s === job.status ? "current" : ""}>
-            {statusNames[s]}
+            {job.kind === "auto_video" && s === "images" ? "전체 사진 영상화" : statusNames[s]}
           </span>
         ))}
       </div>
@@ -1937,6 +1959,7 @@ function Editor({
           </button>
         </div>
       </div>
+      <AutoVideoPanel project={p} disabled={locked} run={run} beforeStart={async () => { await flush(); return revision.current; }} onStart={onRender} />
       <section className="panel audio-settings">
         <div className="section-heading">
           <div>
@@ -2635,7 +2658,10 @@ function Results({ project: p }: { project: Project }) {
       <h2>
         {busyJob(p) ? "쇼츠를 만들고 있어요" : "아직 완성된 영상이 없어요"}
       </h2>
-      <p>스토리보드를 확인한 뒤 영상 렌더링을 눌러 주세요.</p>
+      <p>{busyJob(p)?.kind === "auto_video"
+        ? "전체 사진의 영상 생성과 편집이 끝나면 여기에 완성 영상이 나타납니다. 추가로 누를 버튼은 없어요."
+        : busyJob(p) ? "완료되면 이 화면에서 영상을 확인하고 저장할 수 있어요."
+        : "스토리보드를 확인한 뒤 영상 렌더링을 눌러 주세요."}</p>
     </div>
   );
 }

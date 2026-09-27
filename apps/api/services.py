@@ -66,11 +66,14 @@ def recommendations(product, presets, exclude=""):
     return sorted(ranked, key=lambda x: (-x["score"], x["conceptId"]))[:3]
 
 
-def make_board(project, assets, preset, analysis, variant=0):
+def make_board(project, assets, preset, analysis, variant=0, all_photos=False):
     info = project.info
+    review = preset["id"] == "review"
     hooks = (
         analysis["hooks"][:3] if analysis["mode"] == "ai" else [preset["hookPatterns"][0], *analysis["hooks"][:2]]
     ) + [f"{info['name']}, 내 책상에 놓는다면?"]
+    if review:
+        hooks = [*preset["hookPatterns"][:3], "이 디테일, 내 취향에 저장"]
     ordered = sorted(assets, key=lambda a: not a.primary)
     if variant:
         ordered = ordered[variant % len(ordered) :] + ordered[: variant % len(ordered)]
@@ -79,9 +82,13 @@ def make_board(project, assets, preset, analysis, variant=0):
     pace = info["style"]["pace"]
     count = {"slow": 4, "normal": 5, "fast": 6}[pace]
     count = min(count, info["duration"] // 2)
+    if all_photos:
+        count = max(count, len(ordered))
     features = [s.strip() for s in re.split(r"[\n;]", info["features"]) if s.strip()]
     fallback = [info["name"], "사진으로 살펴보는 디테일", "내 책상에 어울리는 취향"]
     copies = (features + fallback) if variant % 2 == 0 else (fallback + features)
+    if review:
+        copies = ["가까이 보면 이런 디테일", *features, "내 책상에 놓는다면?", "오늘의 문구 위시리스트"]
     scenes = []
     layout_options = ["product_card", "blur_contain", "split", "features", "full_bleed"]
     for i in range(count):
@@ -99,15 +106,21 @@ def make_board(project, assets, preset, analysis, variant=0):
                 layout=layout,
                 caption=caption[:120],
                 voiceover=caption[:300],
-                motion={"type": preset["motionSet"][(i + variant) % len(preset["motionSet"])], "strength": 0.04},
+                motion={"type": preset["motionSet"][(i + variant) % len(preset["motionSet"])], "strength": 0.10 if review else 0.04},
                 transitionIn=preset["transitionSet"][i % len(preset["transitionSet"])],
-                transitionOut="fade",
+                transitionOut="none" if review else "fade",
             )
         )
     remaining = info["duration"] * 30 - 60
     for scene in scenes[1:]:
         scene.durationFrames = remaining // (count - 1)
     scenes[-1].durationFrames += remaining % (count - 1)
+    if review:
+        # Alternate quick detail cuts and longer reading beats, keeping the exact runtime.
+        weights = [0.8 if i % 2 else 1.2 for i in range(1, count)]
+        for scene, weight in zip(scenes[1:], weights):
+            scene.durationFrames = 30 + int((remaining - 30 * (count - 1)) * weight / sum(weights))
+        scenes[-1].durationFrames += info["duration"] * 30 - sum(s.durationFrames for s in scenes)
     return Board(
         durationSec=info["duration"],
         conceptId=preset["id"],

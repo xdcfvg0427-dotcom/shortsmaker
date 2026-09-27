@@ -132,11 +132,43 @@ def test_provider_failed_task_and_timeout(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError):
         video.generate_video(None, "", tmp_path / "x", state, state.update, lambda: False, lambda _: None)
     assert state["taskId"] is None
+    assert state["failedTaskId"] == "existing"
+    assert state["failureCategory"] == "unknown"
     state["taskId"] = "still-running"
     monkeypatch.setattr(settings, "video_timeout", -1)
     with pytest.raises(TimeoutError):
         video.generate_video(None, "", tmp_path / "x", state, state.update, lambda: False, lambda _: None)
     assert state["taskId"] == "still-running"
+
+
+@pytest.mark.parametrize("code,category,phrase", [
+    ("SAFETY.INPUT.IMAGE", "safety", "콘텐츠 검사"),
+    ("INPUT_PREPROCESSING.SAFETY.TEXT", "safety", "콘텐츠 검사"),
+    ("INTERNAL.BAD_OUTPUT.01", "quality", "품질 검사"),
+    ("ASSET.INVALID", "invalid_asset", "입력 파일"),
+    ("INTERNAL", "provider", "처리 오류"),
+    (None, "unknown", "Request History"),
+])
+def test_task_failure_diagnostics_and_safe_retry(monkeypatch, tmp_path, code, category, phrase):
+    calls = []
+    state = {"taskId": "failed-task"}
+
+    def handler(request):
+        calls.append(request.method)
+        return httpx.Response(200, json={"status": "FAILED", "failureCode": code,
+                                        "failure": "private-image-data test-secret"})
+
+    mock_client(monkeypatch, handler)
+    with pytest.raises(RuntimeError, match=phrase) as error:
+        video.generate_video(None, "", tmp_path / "x", state, state.update, lambda: False, lambda _: None)
+    assert "test-secret" not in str(error.value)
+    assert "private-image-data" not in str(error.value)
+    assert state["failedTaskId"] == "failed-task"
+    assert state["failureCategory"] == category
+    if category in ("safety", "invalid_asset"):
+        with pytest.raises(RuntimeError, match="재전송하지 않았습니다"):
+            video.generate_video(None, "", tmp_path / "x", state, state.update, lambda: False, lambda _: None)
+        assert calls == ["GET"]
 
 
 def test_video_api_worker_lifecycle(client, demo, monkeypatch, tmp_path):

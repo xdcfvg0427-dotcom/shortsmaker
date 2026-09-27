@@ -171,8 +171,11 @@ export type Job = {
   error_code: string | null;
   attempt: number;
   created_at: string;
+  phase?: string;
+  photos?: { assetId: string; filename: string; status: string }[];
 };
 export const statusNames: Record<string, string> = {
+  auto_video: "전체 사진 자동 제작",
   draft: "작성 중",
   ready: "편집 준비",
   queued: "대기",

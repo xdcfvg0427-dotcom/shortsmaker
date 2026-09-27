@@ -28,7 +28,7 @@ def finish_job(client, endpoint):
 
 def test_presets_and_custom_crud(client):
     data = client.get("/api/presets").json()
-    assert len(data) == 20
+    assert len(data) == len(list((ROOT / "packages/concept-presets").glob("*.json")))
     for path in (ROOT / "packages/concept-presets").glob("*.json"):
         Preset.model_validate_json(path.read_text(encoding="utf-8"))
     default = {k: v for k, v in data[0].items() if k != "builtin"}

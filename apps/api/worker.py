@@ -14,6 +14,7 @@ import time
 import wave
 from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from sqlalchemy import select, update
 from .ai import ai_board, analyze
 from .narration import narration_text, speech, require_narration, provider as narration_provider
@@ -42,6 +43,14 @@ def report(jid, status, progress):
         raise Cancelled()
     with Session() as db:
         job = db.get(RenderJob, jid)
+        if job.kind == "auto_video":
+            if job.payload.get("phase") == "clips":
+                items = job.payload["items"]
+                done = sum(bool(item.get("videoId")) for item in items)
+                progress = 10 + 60 * (done + progress / 100) / len(items)
+                status = "images"
+            elif job.payload.get("phase") == "render":
+                progress = 70 + progress * 0.29
         transition(job, status, progress)
         db.get(Project, job.project_id).status = status
         db.commit()
@@ -389,10 +398,11 @@ def render_job(job, assets):
     return outputs
 
 
-def video_job(job, db):
+def video_job(job, db, item_index=None):
     report(job.id, "images", 5)
     quota(MAX_VIDEO_BYTES * 2)
-    folder = safe_path(f"projects/{job.project_id}/jobs/{job.id}")
+    folder = safe_path(f"projects/{job.project_id}/jobs/{job.id}" +
+                       (f"/clip-{item_index}" if item_index is not None else ""))
     folder.mkdir(parents=True, exist_ok=True)
     source = db.get(Asset, job.payload["assetId"])
     if not source or source.project_id != job.project_id or source.kind != "image":
@@ -401,7 +411,12 @@ def video_job(job, db):
     def persist(values):
         with Session() as state_db:
             record = state_db.get(RenderJob, job.id)
-            record.payload = {**record.payload, **values}
+            payload = copy.deepcopy(record.payload)
+            if item_index is None:
+                payload.update(values)
+            else:
+                payload["items"][item_index].update(values)
+            record.payload = payload
             state_db.commit()
 
     def progress(value):
@@ -411,9 +426,13 @@ def video_job(job, db):
             raise VideoCancelled() from None
 
     try:
-        generate_video(safe_path(source.optimized), job.payload["prompt"], folder / "source.mp4",
-                       job.payload, persist, lambda: cancelled(job.id),
-                       progress)
+        try:
+            generate_video(safe_path(source.optimized), job.payload["prompt"], folder / "source.mp4",
+                           job.payload, persist, lambda: cancelled(job.id), progress)
+        except (RuntimeError, TimeoutError) as error:
+            if item_index is not None:
+                raise type(error)(f"사진 {item_index + 1} 생성 실패: {error}") from None
+            raise
     except VideoCancelled:
         raise Cancelled() from None
     metadata = probe(folder / "source.mp4")
@@ -443,12 +462,82 @@ def video_job(job, db):
                      mime="video/mp4", size=destination.stat().st_size, width=720, height=1280,
                      sha256=hashlib.sha256(destination.read_bytes()).hexdigest(), original=relative, optimized=relative))
         scene["videoAssetId"] = aid
-        save_board(db, job.project_id, data)
+        if item_index is not None:
+            for s in data["scenes"]:
+                if s["assetId"] == source.id:
+                    s["videoAssetId"] = aid
+        saved = save_board(db, job.project_id, data)
+        record = db.get(RenderJob, job.id)
+        db.refresh(record)
+        payload = copy.deepcopy(record.payload)
+        if item_index is None:
+            payload["videoId"] = aid
+        else:
+            payload["items"][item_index]["videoId"] = aid
+            payload["revision"] = saved.revision
+            payload["board"] = copy.deepcopy(saved.data)
+        record.payload = payload
         db.flush()
     except Exception:
         remove_tree(str(destination.parent.relative_to(settings.storage_dir)))
         raise
     return destination.parent
+
+
+def auto_video_job(job, db, project, photos):
+    if not job.payload.get("board"):
+        report(job.id, "analyzing", 2)
+        preset = job.payload["preset"]
+        presets = [p.data for p in db.scalars(select(ConceptPreset).where(ConceptPreset.active.is_(True)))]
+        analysis = analyze(job.payload["product"], photos, presets)
+        report(job.id, "storyboarding", 6)
+        default = make_board(SimpleNamespace(info=job.payload["product"]), photos, preset, analysis, all_photos=True)
+        edited = ai_board(default, job.payload["product"], photos)
+        # Keep every uploaded photo in the final edit, even if AI omitted a scene.
+        board = edited if len(edited["scenes"]) == len(default["scenes"]) else default
+        for scene, original in zip(board["scenes"], default["scenes"]):
+            scene.update(assetId=original["assetId"], videoAssetId=None, videoPrompt="",
+                         durationFrames=original["durationFrames"], startFrame=original["startFrame"])
+        board["scenes"][-1].update(layout="endcard", caption=project.info["cta"], voiceover=project.info["cta"])
+        board["style"]["narration"] = "ai" if job.payload["narration"] else "script"
+        board["style"]["narrationSource"] = "caption"
+        if board["style"]["musicMood"] == "none":
+            board["style"]["musicMood"] = preset["musicMood"]
+        board = Board.model_validate(board).model_dump()
+        payload = copy.deepcopy(job.payload)
+        for item in payload["items"]:
+            item["sceneId"] = next(s["id"] for s in board["scenes"] if s["assetId"] == item["assetId"])
+            for s in board["scenes"]:
+                if s["assetId"] == item["assetId"]:
+                    s["videoAssetId"] = item.get("videoId")
+                    s["videoPrompt"] = item["prompt"]
+        saved = save_board(db, project.id, board, True)
+        payload.update(board=board, revision=saved.revision, phase="clips")
+        job.payload = payload
+        db.commit()
+    else:
+        job.payload = {**job.payload, "phase": "clips"}
+        db.commit()
+    for index in range(len(job.payload["items"])):
+        if cancelled(job.id):
+            raise Cancelled()
+        item = copy.deepcopy(job.payload["items"][index])
+        if item.get("videoId"):
+            clip = db.get(Asset, item["videoId"])
+            if not clip or not safe_path(clip.optimized).is_file():
+                raise ValueError("완료된 영상 파일이 없습니다. 전체 사진으로 숏츠 완성하기를 다시 눌러 주세요.")
+            continue
+        video_job(SimpleNamespace(id=job.id, project_id=job.project_id, payload=item), db, index)
+        # Save each paid result before starting the next photo, so failures never discard it.
+        db.commit()
+        db.refresh(job)
+    job.payload = {**job.payload, "phase": "render"}
+    db.commit()
+    assets = list(db.scalars(select(Asset).where(Asset.project_id == project.id).order_by(Asset.position)))
+    outputs = render_job(job, assets)
+    if cancelled(job.id):
+        raise Cancelled()
+    db.add_all(outputs)
 
 
 def process_job(jid):
@@ -488,6 +577,8 @@ def process_job(jid):
                     save_board(db, p.id, board, True)
                 if cancelled(jid):
                     raise Cancelled()
+            elif j.kind == "auto_video":
+                auto_video_job(j, db, p, photos)
             elif j.kind == "video":
                 video_folder = video_job(j, db)
                 if cancelled(jid):
@@ -498,7 +589,7 @@ def process_job(jid):
                     raise Cancelled()
                 db.add_all(outputs)
             j.status, j.progress, j.ended_at = "completed", 100, now()
-            p.status = "completed" if j.kind == "render" else "ready"
+            p.status = "completed" if j.kind in ("render", "auto_video") else "ready"
             p.updated_at = now()
             db.commit()
             succeeded = True

@@ -34,9 +34,11 @@ from .db import (
     uid,
 )
 from .schemas import AppDefaults, Board, Preset, Product
-from .services import ACTIVE, active_job, images, invalidate, recommendations, save_board, seed_presets
+from .services import ACTIVE, active_job, fingerprint, images, invalidate, recommendations, save_board, seed_presets
 from .storage import binary, remove_tree, safe_path, upload
 from .video import MODEL
+from .automation import photo_plan, public_plan
+from .review_prompt import hands_on_prompt
 from .narration import provider as narration_provider, require_narration
 
 logger = logging.getLogger("paper-studio")
@@ -223,7 +225,8 @@ def job_view(job):
             "ended_at",
             "cancel_requested",
         )
-    }
+    } | ({"photos": public_plan(job.payload.get("items", [])), "phase": job.payload.get("phase", "planning")}
+         if job.kind == "auto_video" else {})
 
 
 def project_view(db, p, detail=False):
@@ -661,6 +664,59 @@ def render(pid: str, db: DB):
     return enqueue(db, get_project(db, pid), "render")
 
 
+class AutoVideoRequest(BaseModel):
+    revision: int = Field(ge=0)
+    narration: bool = False
+    useCurrentEdit: bool = False
+
+
+@app.get("/api/projects/{pid}/auto-video/plan")
+def auto_video_plan(pid: str, db: DB):
+    p = get_project(db, pid)
+    return {"photos": public_plan(photo_plan(db, pid, images(db, pid), p.info)),
+            "prompt": hands_on_prompt(p.info)}
+
+
+def enqueue_auto_video(db, p, value, previous=None):
+    if active_job(db, p.id):
+        raise HTTPException(409, "이미 진행 중인 작업이 있습니다.")
+    if not settings.runway_api_key:
+        raise HTTPException(409, "스튜디오 설정에서 AI 영상 생성 연결을 먼저 설정해 주세요.")
+    photos = images(db, p.id)
+    if not photos:
+        raise HTTPException(422, "제품 사진을 한 장 이상 올려 주세요.")
+    board = db.get(Storyboard, p.id)
+    if value.revision != (board.revision if board else 0):
+        raise HTTPException(409, "편집 내용이 변경되었습니다. 새로고침한 뒤 다시 시작해 주세요.")
+    product = copy.deepcopy(p.info)
+    if board and value.useCurrentEdit:
+        product.update(style=copy.deepcopy(board.data["style"]), duration=board.data["durationSec"],
+                       conceptId=board.data["conceptId"])
+    preset = db.get(ConceptPreset, product["conceptId"])
+    if not preset:
+        raise HTTPException(409, "컨셉을 다시 선택해 주세요.")
+    if previous:
+        if previous["inputHash"] != fingerprint(p, photos) or previous.get("revision", 0) != value.revision:
+            raise HTTPException(409, "사진이나 편집 내용이 변경되었습니다. 전체 사진으로 숏츠 완성하기를 다시 눌러 주세요.")
+        payload = copy.deepcopy(previous)
+    else:
+        payload = {"items": photo_plan(db, p.id, photos, product), "product": product,
+                   "preset": copy.deepcopy(preset.data), "inputHash": fingerprint(p, photos),
+                   "revision": value.revision, "narration": value.narration, "phase": "planning"}
+    if value.narration and not narration_provider():
+        raise HTTPException(409, "자동 내레이션 연결을 먼저 설정해 주세요.")
+    job = RenderJob(project_id=p.id, kind="auto_video", payload=payload)
+    db.add(job)
+    p.status, p.updated_at = "queued", now()
+    db.commit()
+    return job_view(job)
+
+
+@app.post("/api/projects/{pid}/auto-video", status_code=202)
+def start_auto_video(pid: str, value: AutoVideoRequest, db: DB):
+    return enqueue_auto_video(db, get_project(db, pid), value)
+
+
 class VideoRequest(BaseModel):
     revision: int = Field(ge=1)
 
@@ -683,7 +739,7 @@ def enqueue_video(db, p, scene_id, revision, previous=None):
     if previous:
         if any(payload[k] != previous.get(k) for k in ("assetId", "prompt")):
             raise HTTPException(409, "사진이나 설명이 변경되었습니다. 장면에서 새로 생성해 주세요.")
-        payload.update({k: previous[k] for k in ("taskId", "submissionStarted") if k in previous})
+        payload.update({k: previous[k] for k in ("taskId", "submissionStarted", "failedTaskId", "failureCategory") if k in previous})
     job = RenderJob(project_id=p.id, kind="video", payload=payload)
     db.add(job)
     p.status, p.updated_at = "queued", now()
@@ -722,7 +778,11 @@ def retry_job(jid: str, db: DB):
     j = db.get(RenderJob, jid)
     if not j or j.status not in ("failed", "cancelled"):
         raise HTTPException(409, "실패 또는 취소된 작업만 재시도할 수 있습니다.")
-    if j.kind == "video":
+    if j.kind == "auto_video":
+        b = db.get(Storyboard, j.project_id)
+        result = enqueue_auto_video(db, get_project(db, j.project_id), AutoVideoRequest(
+            revision=b.revision if b else 0, narration=j.payload["narration"]), j.payload)
+    elif j.kind == "video":
         b = db.get(Storyboard, j.project_id)
         result = enqueue_video(db, get_project(db, j.project_id), j.payload["sceneId"],
                                b.revision if b else 0, j.payload)

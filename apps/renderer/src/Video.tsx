@@ -12,6 +12,7 @@ import {
 import type { Board, Preset, Scene } from "../../../packages/shared-schema";
 import "@fontsource/noto-sans-kr/400.css";
 import "@fontsource/noto-sans-kr/700.css";
+import { ReviewScene } from "./ReviewScene";
 
 export type VideoProps = {
   board: Board;
@@ -574,7 +575,11 @@ export function ShortsVideo(props: VideoProps) {
           from={scene.startFrame}
           durationInFrames={scene.durationFrames}
         >
-          <SceneView {...props} scene={scene} index={index} />
+          {props.preset.id === "review" ? (
+            <ReviewScene {...props} scene={scene} index={index} />
+          ) : (
+            <SceneView {...props} scene={scene} index={index} />
+          )}
         </Sequence>
       ))}
     </AbsoluteFill>

@@ -27,6 +27,24 @@ class VideoCancelled(Exception):
     pass
 
 
+def task_failure(result, label):
+    """Translate known diagnostics; never expose provider text that may echo private inputs."""
+    code = result.get("failureCode")
+    if not isinstance(code, str):
+        code = ""
+    if code.startswith("SAFETY.") or code == "INPUT_PREPROCESSING.SAFETY.TEXT":
+        return "safety", f"Runway의 콘텐츠 검사에서 {label} 생성이 거절됐습니다. 같은 요청을 반복하지 말고 개발자 콘솔의 Request History에서 사유를 확인해 주세요."
+    if code.startswith("INTERNAL.BAD_OUTPUT"):
+        return "quality", f"Runway가 생성한 {label}을 품질 검사에서 통과시키지 못했습니다. 입력 사진에 상품 외의 겹친 문구·워터마크가 있는지 확인해 주세요. 정확한 사유는 Request History에서 확인할 수 있습니다."
+    if code == "ASSET.INVALID":
+        return "invalid_asset", "Runway가 입력 파일을 처리하지 못했습니다. 원본 JPG/PNG 사진을 다시 올려 주세요."
+    if code in ("INTERNAL", "INPUT_PREPROCESSING.INTERNAL", "THIRD_PARTY.UNAVAILABLE"):
+        return "provider", f"Runway 측 처리 오류로 {label} 생성이 중단됐습니다. 잠시 후 재시도해 주세요."
+    if result.get("status") in ("CANCELED", "CANCELLED"):
+        return "cancelled", f"Runway에서 {label} 생성 작업이 취소됐습니다. 개발자 콘솔의 Request History를 확인해 주세요."
+    return "unknown", f"Runway가 {label} 생성을 완료하지 못했습니다. 개발자 콘솔의 Request History에서 실패 사유를 확인해 주세요."
+
+
 def image_input(path):
     # Pad to the output ratio so the provider does not crop the product.
     with Image.open(path) as source:
@@ -108,13 +126,15 @@ def generate_media(
             if is_cancelled():
                 raise VideoCancelled()
             if not task_id:
+                if state.get("failureCategory") in ("safety", "invalid_asset"):
+                    raise RuntimeError("입력 확인이 필요한 실패입니다. 같은 요청을 재전송하지 않았습니다. Request History를 확인하고 사진이나 설명을 수정해 주세요.")
                 if state.get("submissionStarted"):
                     raise RuntimeError(
                         "생성 요청의 접수 여부를 확인할 수 없습니다. Runway 사용 내역을 확인한 뒤 새로 생성하세요."
                     )
                 check_credits(client, required_credits)
                 payload = request_body()
-                persist({"submissionStarted": True})
+                persist({"submissionStarted": True, "failureCategory": None, "failedTaskId": None})
                 response = client.post(endpoint, json=payload)
                 # A definitive rejection allows a user-initiated retry. Ambiguous failures do not.
                 if 400 <= response.status_code < 500:
@@ -146,8 +166,10 @@ def generate_media(
                     url = output[0]
                     break
                 if status in ("FAILED", "CANCELED", "CANCELLED"):
-                    persist({"taskId": None, "submissionStarted": False})
-                    raise RuntimeError(f"Runway가 {label} 생성을 완료하지 못했습니다. 입력 내용을 확인해 주세요.")
+                    category, message = task_failure(result, label)
+                    persist({"taskId": None, "submissionStarted": False,
+                             "failedTaskId": task_id, "failureCategory": category})
+                    raise RuntimeError(message)
                 progress(min(80, 10 + (time.monotonic() - started) / 10))
                 for _ in range(10):
                     if is_cancelled():

@@ -66,6 +66,10 @@ GET으로 받은 `{data, revision}`을 수정해 PUT합니다. 장면 시간은 
 요청 전문과 API 키는 로그에 남기지 않습니다. 400/415/422는 입력 오류, 409는 작업·버전 충돌, 413은 크기/저장 공간, 500은 내부 오류입니다.
 # 사진 기반 AI 영상
 
+`GET /api/projects/{pid}/auto-video/plan`은 전체 사진의 재사용/대기/기존 작업 확인 상태를 반환합니다. `POST /api/projects/{pid}/auto-video`에 `{ "revision": 0, "narration": false }`를 보내면 전체 사진 영상화 → 자동 장면 구성·자막·음악 합성 → 최종 렌더를 수행하는 `kind: "auto_video"` 작업을 반환합니다(202). 스토리보드가 있으면 최신 revision을 전달합니다. `narration: true`는 유료 AI 음성을 포함합니다.
+
+이 작업은 기존 편집본을 모든 사진이 포함된 새 구성으로 바꿉니다. 상품 설정의 컨셉·길이·스타일을 사용하며, 요청에 `useCurrentEdit: true`를 추가하면 현재 편집본의 설정을 사용합니다. 기존 완성 영상은 유지합니다. 진행 응답에는 `phase`와 사진별 `photos: [{assetId, filename, status}]`가 포함됩니다. 사진 상태는 `pending`, `checking`, `processing`, `completed`입니다. 클립마다 저장하므로 취소·실패 후 `/jobs/{jid}/retry`로 재개할 때 완료된 클립은 재생성하지 않습니다. 사진·상품·편집본이 변경되면 재시도는 409이며 새 자동 제작 요청에서 호환되는 기존 클립과 외부 작업을 재사용합니다.
+
 `POST /api/projects/{pid}/scenes/{sceneId}/video`에 `{ "revision": 1 }`을 보내면 `kind: "video"` 작업을 반환합니다(202). 장면의 `assetId` 사진과 `videoPrompt` 설명으로 Runway Gen-4 Turbo 5초 영상을 생성합니다. 먼저 스토리보드를 저장하고 최신 revision을 전달하세요. API 키 미설정·작업 중·revision 충돌은 409, 없는 장면은 404입니다.
 
 기존 `/api/jobs/{jid}` 조회, `/cancel`, `/retry`를 사용합니다. 영상 작업은 `queued → images → verifying → completed` 순서로 처리되며 완료 시 `kind: "video"` Asset을 추가하고 장면의 `videoAssetId`를 설정합니다. GET 프로젝트를 다시 조회해 새 revision과 장면을 반영하세요. Asset 파일 API는 `video/mp4` 및 Range 요청을 지원합니다.

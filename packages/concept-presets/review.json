@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "review",
+  "name": "문구 취향 리뷰",
+  "description": "크림 톤에 라임 포인트, 리듬 있는 컷과 큰 자막. 발견부터 디테일, 위시리스트까지 이어지는 문구 리뷰입니다.",
+  "marketingGoal": "engagement",
+  "targetAudience": ["stationery_fans", "all"],
+  "palette": ["#282526", "#F5F1E9", "#DFFF80"],
+  "fontStyle": "bold",
+  "captionStyle": "bubble",
+  "pace": "fast",
+  "transitionSet": ["pop", "none", "slide"],
+  "motionSet": ["zoom_out", "zoom_in", "pan_left", "zoom_in"],
+  "overlaySet": ["sticker"],
+  "musicMood": "trendy",
+  "copyTone": "friendly",
+  "hookPatterns": [
+    "잠깐, 이 문구 취향인데?",
+    "내 책상에 놓고 싶은 한 가지",
+    "문구 좋아하면, 이 디테일 봐요"
+  ],
+  "outroPattern": "마음에 들면 위시리스트에 저장",
+  "seasonTags": []
+}

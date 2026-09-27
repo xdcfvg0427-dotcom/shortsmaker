@@ -1887,3 +1887,14 @@ details .style-fields {
 .desktop-settings fieldset:disabled { opacity: .65; }
 .desktop-settings input[readonly] { background: #f3f5f2; }
 .desktop-error { color: #a63232; padding: 12px; background: #fff0ef; border-radius: 8px; }
+.auto-video-panel { background: linear-gradient(120deg, #f5f1e9, #f3f8e9); }
+.auto-video-steps { display: flex; flex-wrap: wrap; gap: 12px 32px; padding-left: 22px; font-weight: 600; }
+.auto-photo-strip { display: flex; gap: 12px; overflow-x: auto; padding: 12px 0; }
+.auto-photo-strip > div { flex: 0 0 88px; text-align: center; font-size: 12px; }
+.auto-photo-strip img { width: 88px; height: 106px; object-fit: contain; background: white; border-radius: 12px; display: block; margin-bottom: 6px; }
+.auto-video-panel .auto-narration { display: flex; flex-direction: row; justify-content: flex-start; align-items: center; gap: 8px; }
+.auto-narration input { width: auto; }
+.auto-job-photos ul { list-style: none; padding: 0; display: grid; gap: 6px; }
+.auto-job-photos li { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; }
+.auto-job-photos li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auto-job-photos li b { flex-shrink: 0; }
